@@ -1,6 +1,6 @@
 {
-  "buildCommand": "pnpm install && if [ -d birthday-cake-app ]; then cd birthday-cake-app; elif [ -d ../birthday-cake-app ]; then cd ../birthday-cake-app; else cd ../../birthday-cake-app; fi && pnpm run build && rm -rf ../out && mkdir -p ../out && cp -r dist/* ../out/",
-  "outputDirectory": "out",
+  "buildCommand": "pnpm install && pnpm run build",
+  "outputDirectory": "dist",
   "framework": null,
   "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
   "env": {
