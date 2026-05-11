@@ -1,150 +1,157 @@
 interface BirthdayCakeProps {
   blownCandles: Set<number>;
-  blowingOut: Set<number>;
+  blowingOut: boolean;
 }
 
-// 29 candles in 3 rows, positioned on the elliptical cake top
-// baseY = where the candle bottom meets the cake frosting
+// SVG cake: top-tier frosting ellipse at cx=150, cy=88, rx=88, ry=12
+// Candle baseY = bottom of candle body, sitting on the frosting surface
+// ellipse surface y = 88 - 12*sqrt(1 - ((x-150)/88)^2)
+// We embed candles slightly into the frosting (baseY ≈ surface_y + 4)
+
 const CANDLE_POSITIONS: { x: number; baseY: number; scale: number }[] = [
-  // Row 1 — back (7 candles, smaller/shorter for depth)
-  { x: 90,  baseY: 48, scale: 0.72 },
-  { x: 103, baseY: 48, scale: 0.72 },
-  { x: 116, baseY: 48, scale: 0.72 },
-  { x: 130, baseY: 48, scale: 0.72 },
-  { x: 144, baseY: 48, scale: 0.72 },
-  { x: 158, baseY: 48, scale: 0.72 },
-  { x: 171, baseY: 48, scale: 0.72 },
+  // ── Row 1  back  (7 candles, scale 0.70) ──────────────────────────
+  { x: 97,  baseY: 84, scale: 0.70 },
+  { x: 113, baseY: 83, scale: 0.70 },
+  { x: 129, baseY: 82, scale: 0.70 },
+  { x: 145, baseY: 82, scale: 0.70 },
+  { x: 161, baseY: 82, scale: 0.70 },
+  { x: 177, baseY: 83, scale: 0.70 },
+  { x: 193, baseY: 84, scale: 0.70 },
 
-  // Row 2 — middle (10 candles, medium)
-  { x: 70,  baseY: 51, scale: 0.86 },
-  { x: 83,  baseY: 51, scale: 0.86 },
-  { x: 97,  baseY: 51, scale: 0.86 },
-  { x: 111, baseY: 51, scale: 0.86 },
-  { x: 125, baseY: 51, scale: 0.86 },
-  { x: 139, baseY: 51, scale: 0.86 },
-  { x: 153, baseY: 51, scale: 0.86 },
-  { x: 167, baseY: 51, scale: 0.86 },
-  { x: 181, baseY: 51, scale: 0.86 },
-  { x: 195, baseY: 51, scale: 0.86 },
+  // ── Row 2  mid   (10 candles, scale 0.85) ─────────────────────────
+  { x: 80,  baseY: 88, scale: 0.85 },
+  { x: 95,  baseY: 86, scale: 0.85 },
+  { x: 110, baseY: 85, scale: 0.85 },
+  { x: 125, baseY: 84, scale: 0.85 },
+  { x: 140, baseY: 84, scale: 0.85 },
+  { x: 155, baseY: 84, scale: 0.85 },
+  { x: 170, baseY: 84, scale: 0.85 },
+  { x: 185, baseY: 85, scale: 0.85 },
+  { x: 200, baseY: 86, scale: 0.85 },
+  { x: 216, baseY: 88, scale: 0.85 },
 
-  // Row 3 — front (12 candles, full size)
-  { x: 62,  baseY: 54, scale: 1 },
-  { x: 75,  baseY: 54, scale: 1 },
-  { x: 88,  baseY: 54, scale: 1 },
-  { x: 101, baseY: 54, scale: 1 },
-  { x: 114, baseY: 54, scale: 1 },
-  { x: 127, baseY: 54, scale: 1 },
-  { x: 140, baseY: 54, scale: 1 },
-  { x: 153, baseY: 54, scale: 1 },
-  { x: 166, baseY: 54, scale: 1 },
-  { x: 179, baseY: 54, scale: 1 },
-  { x: 192, baseY: 54, scale: 1 },
-  { x: 205, baseY: 54, scale: 1 },
+  // ── Row 3  front (12 candles, scale 1.00) ─────────────────────────
+  { x: 68,  baseY: 94, scale: 1.00 },
+  { x: 82,  baseY: 91, scale: 1.00 },
+  { x: 96,  baseY: 89, scale: 1.00 },
+  { x: 110, baseY: 88, scale: 1.00 },
+  { x: 124, baseY: 87, scale: 1.00 },
+  { x: 138, baseY: 87, scale: 1.00 },
+  { x: 152, baseY: 87, scale: 1.00 },
+  { x: 166, baseY: 87, scale: 1.00 },
+  { x: 180, baseY: 88, scale: 1.00 },
+  { x: 194, baseY: 89, scale: 1.00 },
+  { x: 208, baseY: 91, scale: 1.00 },
+  { x: 222, baseY: 94, scale: 1.00 },
 ];
 
-function CandleSVG({
+function SmallCandle({
   x, baseY, scale, index, blown, blowingOut,
 }: {
   x: number; baseY: number; scale: number;
   index: number; blown: boolean; blowingOut: boolean;
 }) {
-  const bodyW = 5 * scale;
-  const bodyH = 22 * scale;
-  const flameW = 7 * scale;
-  const flameH = 11 * scale;
-  const wickH = 4 * scale;
+  const bw   = 5.5 * scale;   // body width
+  const bh   = 24  * scale;   // body height
+  const wh   = 4   * scale;   // wick height
+  const fw   = 7   * scale;   // flame width
+  const fh   = 12  * scale;   // flame height
 
-  // Candle body top y (candle goes up from baseY)
-  const bodyTopY = baseY - bodyH;
-  const wickTopY = bodyTopY - wickH;
-  const flameBaseY = wickTopY;
+  const bodyTop = baseY - bh;
+  const wickTop = bodyTop - wh;
+  const flameBase = wickTop;
 
-  const delayMs = (index % 5) * 60;
+  // Vary flicker timing per candle so they don't pulse in sync
+  const flickerDur  = (0.22 + (index % 7) * 0.025).toFixed(3);
+  const flickerDelay = ((index % 5) * 55).toString();
 
   return (
-    <g key={index}>
-      {/* Candle body — striped blue */}
+    <g>
+      {/* gradients / patterns unique to this candle */}
       <defs>
-        <linearGradient id={`cg${index}`} x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="#5ab3ff" />
-          <stop offset="40%" stopColor="#3399ff" />
-          <stop offset="100%" stopColor="#1a73e8" />
+        <linearGradient id={`cside${index}`} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%"   stopColor="#7ec8ff" />
+          <stop offset="50%"  stopColor="#2196f3" />
+          <stop offset="100%" stopColor="#1565c0" />
         </linearGradient>
-        <pattern id={`cp${index}`} x="0" y="0" width="4" height={6 * scale} patternUnits="userSpaceOnUse">
-          <rect width="4" height={3 * scale} fill={`url(#cg${index})`} />
-          <rect y={3 * scale} width="4" height={3 * scale} fill="#1565c0" />
+        <pattern
+          id={`cstripe${index}`}
+          x="0" y="0"
+          width={bw} height={7 * scale}
+          patternUnits="userSpaceOnUse"
+        >
+          <rect width={bw} height={3.5 * scale} fill={`url(#cside${index})`} />
+          <rect y={3.5 * scale} width={bw} height={3.5 * scale} fill="#1565c0" />
         </pattern>
-        <radialGradient id={`fg${index}`} cx="50%" cy="80%" r="55%">
-          <stop offset="0%" stopColor="#fff9c4" />
-          <stop offset="35%" stopColor="#ffee58" />
-          <stop offset="65%" stopColor="#ffa726" />
-          <stop offset="100%" stopColor="#ff5722" stopOpacity="0.8" />
+        <radialGradient id={`fg${index}`} cx="45%" cy="75%" r="60%">
+          <stop offset="0%"   stopColor="#fffde7" />
+          <stop offset="30%"  stopColor="#fff176" />
+          <stop offset="65%"  stopColor="#ffa726" />
+          <stop offset="100%" stopColor="#f4511e" stopOpacity="0.7" />
         </radialGradient>
       </defs>
 
+      {/* candle body */}
       <rect
-        x={x - bodyW / 2}
-        y={bodyTopY}
-        width={bodyW}
-        height={bodyH}
-        rx={bodyW * 0.25}
-        fill={`url(#cp${index})`}
+        x={x - bw / 2} y={bodyTop}
+        width={bw} height={bh}
+        rx={bw * 0.25}
+        fill={`url(#cstripe${index})`}
       />
-      {/* Wax top highlight */}
+      {/* shine */}
       <rect
-        x={x - bodyW / 2 + 1}
-        y={bodyTopY}
-        width={bodyW * 0.3}
-        height={bodyH * 0.6}
+        x={x - bw / 2 + 0.8} y={bodyTop + 2}
+        width={bw * 0.28} height={bh * 0.55}
         rx={1}
-        fill="rgba(255,255,255,0.25)"
+        fill="rgba(255,255,255,0.28)"
       />
 
-      {/* Wick */}
-      <rect
-        x={x - 0.7}
-        y={wickTopY}
-        width={1.4}
-        height={wickH}
-        fill="#37474f"
-        rx={0.5}
+      {/* wax drip at top */}
+      <ellipse cx={x} cy={bodyTop} rx={bw * 0.55} ry={1.5 * scale} fill="rgba(255,255,255,0.6)" />
+
+      {/* wick */}
+      <line
+        x1={x} y1={wickTop} x2={x} y2={bodyTop}
+        stroke="#4e342e" strokeWidth={1 * scale} strokeLinecap="round"
       />
 
-      {/* Flame */}
+      {/* flame */}
       {!blown && (
         <g
           style={{
-            transformOrigin: `${x}px ${flameBaseY}px`,
+            transformOrigin: `${x}px ${flameBase}px`,
             animation: blowingOut
-              ? `blow-out 0.5s ease-in forwards`
-              : `flicker ${0.25 + (index % 3) * 0.07}s ease-in-out infinite alternate`,
-            animationDelay: `${delayMs}ms`,
-            filter: `drop-shadow(0 0 ${3 * scale}px #ffaa00) drop-shadow(0 0 ${6 * scale}px #ff6b00)`,
+              ? `blow-out 0.55s ease-in forwards`
+              : `flicker ${flickerDur}s ease-in-out ${flickerDelay}ms infinite alternate`,
+            filter: `drop-shadow(0 0 ${3 * scale}px #ffb300) drop-shadow(0 0 ${5 * scale}px #ff6d00)`,
           }}
         >
           <path
-            d={`M ${x} ${flameBaseY - flameH}
-                C ${x - flameW * 0.3} ${flameBaseY - flameH * 0.6},
-                  ${x - flameW * 0.5} ${flameBaseY - flameH * 0.2},
-                  ${x} ${flameBaseY}
-                C ${x + flameW * 0.5} ${flameBaseY - flameH * 0.2},
-                  ${x + flameW * 0.3} ${flameBaseY - flameH * 0.6},
-                  ${x} ${flameBaseY - flameH} Z`}
+            d={[
+              `M ${x} ${flameBase - fh}`,
+              `C ${x - fw * 0.28} ${flameBase - fh * 0.65},`,
+              `  ${x - fw * 0.48} ${flameBase - fh * 0.22},`,
+              `  ${x} ${flameBase}`,
+              `C ${x + fw * 0.48} ${flameBase - fh * 0.22},`,
+              `  ${x + fw * 0.28} ${flameBase - fh * 0.65},`,
+              `  ${x} ${flameBase - fh} Z`,
+            ].join(" ")}
             fill={`url(#fg${index})`}
+          />
+          {/* inner bright core */}
+          <ellipse
+            cx={x} cy={flameBase - fh * 0.28}
+            rx={fw * 0.22} ry={fh * 0.22}
+            fill="rgba(255,255,255,0.55)"
           />
         </g>
       )}
 
-      {/* Smoke after blow */}
+      {/* smoke wisp after blown */}
       {blown && (
-        <ellipse
-          cx={x}
-          cy={wickTopY - 5}
-          rx={2 * scale}
-          ry={1.5 * scale}
-          fill="rgba(150,150,160,0.35)"
-          style={{ animation: "smoke-rise 1.2s ease-out forwards" }}
-        />
+        <g style={{ animation: "smoke-rise 1.2s ease-out forwards", transformOrigin: `${x}px ${wickTop}px` }}>
+          <ellipse cx={x} cy={wickTop - 3} rx={2 * scale} ry={1.2 * scale} fill="rgba(180,180,200,0.4)" />
+        </g>
       )}
     </g>
   );
@@ -152,74 +159,61 @@ function CandleSVG({
 
 export function BirthdayCake({ blownCandles, blowingOut }: BirthdayCakeProps) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", userSelect: "none" }}>
+    <div style={{ display: "flex", justifyContent: "center", userSelect: "none" }}>
       <svg
-        width="300"
-        height="220"
-        viewBox="0 0 300 220"
+        width="310" height="225"
+        viewBox="0 0 310 225"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         style={{ overflow: "visible" }}
       >
-        {/* Drop shadow */}
-        <ellipse cx="150" cy="212" rx="108" ry="9" fill="rgba(0,0,0,0.09)" />
+        {/* ── plate / shadow ──────────────────────────────────────── */}
+        <ellipse cx="155" cy="216" rx="110" ry="9"  fill="rgba(0,0,0,0.08)" />
+        <ellipse cx="155" cy="208" rx="110" ry="13" fill="#e8edf5" />
+        <ellipse cx="155" cy="206" rx="110" ry="13" fill="#f0f4fa" />
+        <ellipse cx="155" cy="203" rx="108" ry="11" fill="#dce4f0" />
 
-        {/* Plate */}
-        <ellipse cx="150" cy="202" rx="108" ry="13" fill="#e8edf5" />
-        <ellipse cx="150" cy="200" rx="108" ry="13" fill="#f0f4fa" />
-        <ellipse cx="150" cy="198" rx="106" ry="11" fill="#dce4f0" />
+        {/* ── bottom tier ─────────────────────────────────────────── */}
+        <rect x="40" y="143" width="230" height="58" rx="7" fill="#2196f3" />
+        <rect x="40" y="143" width="230" height="9"  rx="7" fill="#42a5f5" />
+        <line x1="40" y1="163" x2="270" y2="163" stroke="rgba(255,255,255,0.12)" strokeWidth="2" />
+        <line x1="40" y1="180" x2="270" y2="180" stroke="rgba(255,255,255,0.12)" strokeWidth="2" />
+        <rect x="40"  y="143" width="14" height="58" rx="5" fill="rgba(255,255,255,0.07)" />
+        <rect x="256" y="143" width="14" height="58" rx="5" fill="rgba(0,0,0,0.07)" />
+        {/* bottom drips */}
+        <path d="M40 147 C51 147 49 159 62 158 C75 157 73 147 86 147 C99 147 97 159 110 158 C123 157 121 147 134 147 C147 147 145 159 158 158 C171 157 169 147 182 147 C195 147 193 159 206 158 C219 157 217 147 230 147 C243 147 241 159 254 158 C267 157 265 147 270 147 L270 143 L40 143 Z" fill="white" opacity="0.96" />
 
-        {/* Bottom tier */}
-        <rect x="38" y="138" width="224" height="58" rx="6" fill="#2196f3" />
-        <rect x="38" y="138" width="224" height="8" rx="6" fill="#42a5f5" />
-        <line x1="38" y1="158" x2="262" y2="158" stroke="rgba(255,255,255,0.13)" strokeWidth="2" />
-        <line x1="38" y1="174" x2="262" y2="174" stroke="rgba(255,255,255,0.13)" strokeWidth="2" />
-        <rect x="38" y="138" width="13" height="58" fill="rgba(255,255,255,0.07)" rx="6" />
-        <rect x="249" y="138" width="13" height="58" fill="rgba(0,0,0,0.06)" rx="4" />
+        {/* ── top tier ────────────────────────────────────────────── */}
+        <rect x="65"  y="90"  width="180" height="56" rx="7" fill="#1e88e5" />
+        <rect x="65"  y="90"  width="180" height="9"  rx="7" fill="#42a5f5" />
+        <line x1="65"  y1="109" x2="245" y2="109" stroke="rgba(255,255,255,0.12)" strokeWidth="2" />
+        <line x1="65"  y1="126" x2="245" y2="126" stroke="rgba(255,255,255,0.12)" strokeWidth="2" />
+        <rect x="65"  y="90"  width="13" height="56" rx="5" fill="rgba(255,255,255,0.07)" />
+        <rect x="232" y="90"  width="13" height="56" rx="5" fill="rgba(0,0,0,0.07)" />
 
-        {/* Bottom tier frosting drips */}
-        <path
-          d="M38 142 C48 142 46 154 58 153 C70 152 68 142 80 142 C92 142 90 154 102 153 C114 152 112 142 124 142 C136 142 134 154 146 153 C158 152 156 142 168 142 C180 142 178 154 190 153 C202 152 200 142 212 142 C224 142 222 154 234 153 C246 152 244 142 262 142 L262 138 L38 138 Z"
-          fill="white"
-          opacity="0.96"
-        />
+        {/* ── frosting ellipse on top tier ────────────────────────── */}
+        <ellipse cx="155" cy="90" rx="90" ry="13" fill="white" />
+        {/* top drips */}
+        <path d="M65 94 C76 94 74 106 87 105 C100 104 98 94 111 94 C124 94 122 106 135 105 C148 104 146 94 159 94 C172 94 170 106 183 105 C196 104 194 94 207 94 C220 94 218 106 231 105 C244 104 242 94 245 94 L245 90 L65 90 Z" fill="white" opacity="0.96" />
 
-        {/* Top tier */}
-        <rect x="62" y="88" width="176" height="54" rx="6" fill="#1e88e5" />
-        <rect x="62" y="88" width="176" height="8" rx="6" fill="#42a5f5" />
-        <line x1="62" y1="106" x2="238" y2="106" stroke="rgba(255,255,255,0.13)" strokeWidth="2" />
-        <line x1="62" y1="122" x2="238" y2="122" stroke="rgba(255,255,255,0.13)" strokeWidth="2" />
-        <rect x="62" y="88" width="12" height="54" fill="rgba(255,255,255,0.07)" rx="6" />
-        <rect x="226" y="88" width="10" height="54" fill="rgba(0,0,0,0.06)" rx="4" />
-
-        {/* Top frosting ellipse */}
-        <ellipse cx="150" cy="88" rx="88" ry="12" fill="white" />
-
-        {/* Top tier frosting drips */}
-        <path
-          d="M62 92 C72 92 70 104 82 103 C94 102 92 92 104 92 C116 92 114 104 126 103 C138 102 136 92 148 92 C160 92 158 104 170 103 C182 102 180 92 192 92 C204 92 202 104 214 103 C226 102 224 92 238 92 L238 88 L62 88 Z"
-          fill="white"
-          opacity="0.96"
-        />
-
-        {/* Blue dots on frosting */}
-        {[85, 102, 118, 136, 152, 168, 185, 202, 218].map((cx, i) => (
-          <circle key={i} cx={cx} cy={88} r={3} fill="#1a73e8" opacity={0.45} />
+        {/* blue sprinkle dots on frosting */}
+        {[88,104,120,136,152,168,184,200,217].map((cx, i) => (
+          <circle key={i} cx={cx} cy={90} r={3} fill="#1a73e8" opacity={0.42} />
         ))}
-        {[94, 128, 160, 194].map((cx, i) => (
-          <circle key={i} cx={cx} cy={84} r={2} fill="#64b5f6" opacity={0.35} />
+        {[96,128,164,200].map((cx, i) => (
+          <circle key={i} cx={cx} cy={86} r={2} fill="#64b5f6" opacity={0.35} />
         ))}
 
-        {/* 29 candles — rendered in back-to-front row order for z-depth */}
+        {/* ── 29 candles (back→front render order) ────────────────── */}
         {CANDLE_POSITIONS.map((pos, i) => (
-          <CandleSVG
+          <SmallCandle
             key={i}
             index={i}
             x={pos.x}
-            baseY={pos.baseY + 36} /* offset to sit on top tier top y=88 → shift down by 36 */
+            baseY={pos.baseY}
             scale={pos.scale}
             blown={blownCandles.has(i)}
-            blowingOut={blowingOut.has(i)}
+            blowingOut={blowingOut && !blownCandles.has(i)}
           />
         ))}
       </svg>
