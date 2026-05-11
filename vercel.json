@@ -1,6 +1,6 @@
 {
-  "buildCommand": "pnpm install && pnpm --filter @workspace/birthday-cake run build",
-  "outputDirectory": "artifacts/birthday-cake/dist/public",
+  "buildCommand": "pnpm install && pnpm --dir birthday-cake-app run build",
+  "outputDirectory": "birthday-cake-app/dist",
   "framework": null,
   "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
   "env": {
