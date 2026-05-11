@@ -16,7 +16,7 @@ const devPlugins =
         ),
         import("@replit/vite-plugin-dev-banner").then((m) => m.devBanner()),
         import("@replit/vite-plugin-runtime-error-modal").then((m) =>
-          m.runtimeErrorOverlay(),
+          (m.runtimeErrorOverlay ?? m.default)(),
         ),
       ])
     : [];
